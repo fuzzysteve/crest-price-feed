@@ -55,3 +55,7 @@ docs/_build/
 
 # PyBuilder
 target/
+# the venv I'm using
+sell/
+#no hup log
+nohup.out
