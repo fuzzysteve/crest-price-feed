@@ -28,7 +28,7 @@ def RateLimited(maxPerSecond):
 
 
 
-@RateLimited(20)
+@RateLimited(50)
 def getData(redisConnection,requestsConnection,memcacheConnection,typeid,regionid=None):
     if regionid is None:
         regionid=10000002
@@ -37,7 +37,7 @@ def getData(redisConnection,requestsConnection,memcacheConnection,typeid,regioni
         regionstr='forge'
     else:
         regionstr=str(regionid)
-    url="https://public-crest.eveonline.com/market/{}/orders/sell/?type=https://public-crest.eveonline.com/types/{}/".format(regionid,typeid)
+    url="https://crest-tq.eveonline.com/market/{}/orders/sell/?type=https://crest-tq.eveonline.com/types/{}/".format(regionid,typeid)
     exceptionCounter=0
     
     while True:
@@ -64,6 +64,9 @@ def getData(redisConnection,requestsConnection,memcacheConnection,typeid,regioni
     for order in data['items']:
         sellPrice[order['price']]=sellPrice.get(order['price'],0)+order['volume']
         numberOfSellItems+=order['volume']
+    now=datetime.datetime.utcnow()
+    timezone="+00:00"
+    timestring=now.strftime("%Y-%m-%dT%H:%M:%S")+timezone
 
     # generate statistics
     if numberOfSellItems:
@@ -81,15 +84,16 @@ def getData(redisConnection,requestsConnection,memcacheConnection,typeid,regioni
                 boughtPrice+=fivePercentPrice*diff
                 bought=fivePercent
         averageSellPrice=boughtPrice/bought
-        now=datetime.datetime.utcnow()
-        timezone="+00:00"
-        timestring=now.strftime("%Y-%m-%dT%H:%M:%S")+timezone
         value="{:0.2f}|{}|{}|{}".format(averageSellPrice,numberOfSellItems,fivePercent,timestring)
         key="{}sell-{}".format(regionstr,typeid)
         redisConnection.set(key, value)
         memcacheConnection.set(key, value)
         logging.info(key)
-
+    else:
+        value="0|0|0|"+timestring
+        key="{}sell-{}".format(regionstr,typeid)
+        redisConnection.set(key, value)
+        logging.info(key+" Empty")
 
 
 
